@@ -123,17 +123,23 @@ except Exception as e:
 
 # COMMAND ----------
 
-#Load the model from the URI above and execute a test inference 
-pyfunc_model = mlflow.pyfunc.load_model(model_uri)
+import mlflow
+import pandas as pd
 
-# The model is logged with an input example
-input_data = pyfunc_model.input_example
+mlflow.set_registry_uri("databricks-uc")
 
-# Verify the model with the provided input data using the logged dependencies.
-# For more details, refer to:
-# https://mlflow.org/docs/latest/models.html#validate-models-before-deployment
-mlflow.models.predict(
-    model_uri=model_uri,
-    input_data=input_data,
-    env_manager="uv",
-)
+# Use run URI directly instead of model registry
+run_id = "009a6b40ed4249a5996a976f100ca743"
+model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
+
+test_input = pd.DataFrame({"text": ["I love this!", "I hate this!"]})
+result = model.predict(test_input)
+print(result)
+
+# COMMAND ----------
+
+spark.sql("SELECT COUNT(*) FROM workspace.default.tweets_gold").show()
+
+# COMMAND ----------
+
+spark.sql("DESCRIBE HISTORY workspace.default.tweets_gold").show(truncate=False)

@@ -30,7 +30,12 @@
 # - delta.tables.DeltaTable
 # - matplotlib.pyplot
 # - sklearn.metrics (confusion_matrix, classification_report, ConfusionMatrixDisplay)
-
+from pyspark.sql.functions import col
+import pandas as pd
+import mlflow
+from mlflow import MlflowClient
+from matplotlib import pyplot as plt
+from sklearn.metrics import confusion_matrix, classification_report, ConfusionMatrixDisplay
 
 # COMMAND ----------
 
@@ -45,7 +50,7 @@
 # COMMAND ----------
 
 # TODO: Load gold table
-
+df_gold = spark.read.format("delta").table("workspace.default.tweets_gold")
 
 # COMMAND ----------
 
@@ -64,7 +69,14 @@
 # COMMAND ----------
 
 # TODO: Generate classification report
+pdf = df_gold.select("sentiment_id", "predicted_sentiment_id").toPandas()
 
+y_true = pdf["sentiment_id"]
+y_pred = pdf["predicted_sentiment_id"]
+target_names = ["Negative", "Positive"]
+
+report = classification_report(y_true, y_pred, target_names=target_names, output_dict=True)
+print(classification_report(y_true, y_pred, target_names=target_names))
 
 # COMMAND ----------
 
@@ -85,7 +97,14 @@
 # COMMAND ----------
 
 # TODO: Create and display confusion matrix
-
+cm = confusion_matrix(y_true, y_pred)
+disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=target_names)
+fig, ax = plt.subplots(figsize=(6, 6))
+disp.plot(ax=ax)
+plt.title("Sentiment Classification Confusion Matrix")
+plt.tight_layout()
+plt.savefig("/tmp/confusion_matrix.png")
+plt.show()
 
 # COMMAND ----------
 
@@ -110,7 +129,23 @@
 # COMMAND ----------
 
 # TODO: Log metrics and artifacts to MLflow
+mlflow.set_registry_uri("databricks-uc")
 
+silver_version = spark.sql(
+    "DESCRIBE HISTORY workspace.default.tweets_silver LIMIT 1"
+).select("version").collect()[0][0]
+
+with mlflow.start_run(run_name="tweet_sentiment_evaluation"):
+    mlflow.log_metric("accuracy", report["accuracy"])
+    mlflow.log_params({
+        "model_name": "workspace.default.small_sentiment_model",
+        "model_version": 1,
+        "silver_delta_version": silver_version
+    })
+    mlflow.log_artifact("/tmp/confusion_matrix.png")
+    print(f"Accuracy: {report['accuracy']:.4f}")
+    print(f"Silver Delta version: {silver_version}")
+    print("MLflow run logged successfully")
 
 # COMMAND ----------
 

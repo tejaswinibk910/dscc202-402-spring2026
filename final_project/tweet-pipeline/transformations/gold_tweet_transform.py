@@ -35,7 +35,10 @@
 # - pyspark.pipelines (as dp)
 # - pyspark.sql.types and pyspark.sql.functions
 # - mlflow for model loading
-
+import pyspark.pipelines as dp
+import mlflow
+from pyspark.sql.types import StructType, StructField, StringType, DoubleType, IntegerType
+from pyspark.sql.functions import col, when
 
 # COMMAND ----------
 
@@ -47,7 +50,10 @@
 # COMMAND ----------
 
 # TODO: Create streaming table definition
-
+dp.create_streaming_table(
+    "tweets_gold",
+    comment="Tweet sentiment predictions from ML model with ground truth labels"
+)
 
 # COMMAND ----------
 
@@ -60,7 +66,7 @@
 # COMMAND ----------
 
 # TODO: Configure MLflow registry
-
+mlflow.set_registry_uri("databricks-uc")
 
 # COMMAND ----------
 
@@ -74,7 +80,10 @@
 # COMMAND ----------
 
 # TODO: Define model output schema
-
+model_output_schema = StructType([
+    StructField("label", StringType(), True),
+    StructField("score", DoubleType(), True),
+])
 
 # COMMAND ----------
 
@@ -89,8 +98,13 @@
 
 # COMMAND ----------
 
-# TODO: Load model and create Spark UDF
-
+sentiment_udf = mlflow.pyfunc.spark_udf(
+    spark,
+    model_uri="runs:/33b93de27ef447ac84a04e94a438d7df/model",
+    result_type=model_output_schema,
+    env_manager="local",
+    params={"batch_size": 32}
+)
 
 # COMMAND ----------
 
@@ -114,8 +128,34 @@
 
 # COMMAND ----------
 
-# TODO: Define append_flow function for gold transformation
-
+@dp.append_flow(target="tweets_gold")
+def transform_gold():
+    return (
+        spark.readStream
+            .option("maxBytesPerTrigger", "10mb")
+            .table("tweets_silver")
+            .repartition(8)
+            .withColumn("model_output", sentiment_udf(col("cleaned_text")))
+            .withColumn("predicted_label", col("model_output.label"))
+            .withColumn("predicted_score", col("model_output.score") * 100)
+            .withColumn("predicted_sentiment",
+                when(col("predicted_label") == "NEGATIVE", "negative")
+                .otherwise("positive")
+            )
+            .withColumn("sentiment_id",
+                when(col("sentiment") == "0", 0)
+                .when(col("sentiment") == "4", 1)
+                .otherwise(None).cast(IntegerType())
+            )
+            .withColumn("predicted_sentiment_id",
+                when(col("predicted_sentiment") == "negative", 0).otherwise(1).cast(IntegerType())
+            )
+            .select(
+                "timestamp", "mention", "cleaned_text", "text", "sentiment",
+                "predicted_sentiment", "predicted_score",
+                "sentiment_id", "predicted_sentiment_id"
+            )
+    )
 
 # COMMAND ----------
 

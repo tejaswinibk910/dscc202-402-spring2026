@@ -1,0 +1,743 @@
+{
+  "datasets": [
+    {
+      "name": "d09acb14",
+      "displayName": "total_tweets",
+      "queryLines": [
+        "SELECT COUNT(*) AS total_tweets FROM workspace.default.tweets_bronze"
+      ]
+    },
+    {
+      "name": "9c19ee8b",
+      "displayName": "tweets_with_mentions",
+      "queryLines": [
+        "SELECT COUNT(*) AS tweets_with_mentions FROM workspace.default.tweets_silver WHERE mention IS NOT NULL"
+      ]
+    },
+    {
+      "name": "b86f411f",
+      "displayName": "tweets_without_mentions",
+      "queryLines": [
+        "SELECT COUNT(*) AS tweets_without_mentions FROM workspace.default.tweets_silver WHERE mention IS NULL"
+      ]
+    },
+    {
+      "name": "f10fd22e",
+      "displayName": "top_10_users",
+      "queryLines": [
+        "SELECT user, COUNT(*) AS tweet_count FROM workspace.default.tweets_bronze GROUP BY user ORDER BY tweet_count DESC LIMIT 10"
+      ]
+    },
+    {
+      "name": "6602383c",
+      "displayName": "top_10_positive",
+      "queryLines": [
+        "SELECT mention, positive FROM workspace.default.gold_tweet_aggregations ORDER BY positive DESC LIMIT 10"
+      ]
+    },
+    {
+      "name": "d234e607",
+      "displayName": "top_10_negative",
+      "queryLines": [
+        "SELECT mention, negative FROM workspace.default.gold_tweet_aggregations ORDER BY negative DESC LIMIT 10"
+      ]
+    },
+    {
+      "name": "f21871ce",
+      "displayName": "users_with_sentiment_breakdown",
+      "queryLines": [
+        "SELECT user, \r\n",
+        "    COUNT(*) AS total_tweets,\r\n",
+        "    SUM(CASE WHEN sentiment = '4' THEN 1 ELSE 0 END) AS positive_tweets,\r\n",
+        "    SUM(CASE WHEN sentiment = '0' THEN 1 ELSE 0 END) AS negative_tweets\r\n",
+        "FROM workspace.default.tweets_bronze\r\n",
+        "GROUP BY user\r\n",
+        "ORDER BY total_tweets DESC\r\n",
+        "LIMIT 10"
+      ]
+    },
+    {
+      "name": "80eca708",
+      "displayName": "sentiment_overtime",
+      "queryLines": [
+        "SELECT DATE_TRUNC('day', timestamp) AS day, \r\n",
+        "    predicted_sentiment, COUNT(*) AS count\r\n",
+        "FROM workspace.default.tweets_gold\r\n",
+        "WHERE timestamp IS NOT NULL\r\n",
+        "GROUP BY day, predicted_sentiment\r\n",
+        "ORDER BY day"
+      ]
+    },
+    {
+      "name": "049a553b",
+      "displayName": "confidence_over_sentiment",
+      "queryLines": [
+        "SELECT predicted_sentiment, ROUND(AVG(predicted_score), 2) AS avg_confidence\r\n",
+        "FROM workspace.default.tweets_gold\r\n",
+        "GROUP BY predicted_sentiment"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "861e35ac",
+      "displayName": "Untitled page",
+      "layout": [
+        {
+          "widget": {
+            "name": "tweets-with-mentions",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "9c19ee8b",
+                  "fields": [
+                    {
+                      "name": "sum(tweets_with_mentions)",
+                      "expression": "SUM(`tweets_with_mentions`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Tweets with mentions"
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(tweets_with_mentions)"
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 0,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "ti1",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "d09acb14",
+                  "fields": [
+                    {
+                      "name": "sum(total_tweets)",
+                      "expression": "SUM(`total_tweets`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Total Tweets"
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(total_tweets)"
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 5,
+            "y": 0,
+            "width": 2,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "tweets-without-mention",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "b86f411f",
+                  "fields": [
+                    {
+                      "name": "sum(tweets_without_mentions)",
+                      "expression": "SUM(`tweets_without_mentions`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Tweets without mentions"
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(tweets_without_mentions)"
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "top-10",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "f10fd22e",
+                  "fields": [
+                    {
+                      "name": "user",
+                      "expression": "`user`"
+                    },
+                    {
+                      "name": "tweet_count",
+                      "expression": "`tweet_count`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Top 10 Users"
+              },
+              "mark": {
+                "colors": [
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 10
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 2
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 3
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 4
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 5
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 6
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 7
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 8
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 9
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 10
+                  }
+                ]
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "user",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "tweet_count",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "sentiment-over-t",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "80eca708",
+                  "fields": [
+                    {
+                      "name": "predicted_sentiment",
+                      "expression": "`predicted_sentiment`"
+                    },
+                    {
+                      "name": "monthly(day)",
+                      "expression": "DATE_TRUNC(\"MONTH\", `day`)"
+                    },
+                    {
+                      "name": "sum(count)",
+                      "expression": "SUM(`count`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Sentiment over time"
+              },
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "monthly(day)",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(count)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "predicted_sentiment",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "negative",
+                        "color": {
+                          "themeColorType": "visualizationColors",
+                          "position": 6
+                        }
+                      },
+                      {
+                        "value": "positive",
+                        "color": "#935ED7"
+                      }
+                    ]
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 2,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "top-101",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "6602383c",
+                  "fields": [
+                    {
+                      "name": "mention",
+                      "expression": "`mention`"
+                    },
+                    {
+                      "name": "positive",
+                      "expression": "`positive`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Top 10 positive"
+              },
+              "mark": {
+                "colors": [
+                  "#966ABE",
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 2
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 3
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 4
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 5
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 6
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 7
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 8
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 9
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 10
+                  }
+                ]
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "mention",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "positive",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 8,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "top1",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "d234e607",
+                  "fields": [
+                    {
+                      "name": "mention",
+                      "expression": "`mention`"
+                    },
+                    {
+                      "name": "negative",
+                      "expression": "`negative`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Top 10 negative"
+              },
+              "mark": {
+                "colors": [
+                  "#A42C44",
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 2
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 3
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 4
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 5
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 6
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 7
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 8
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 9
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 10
+                  }
+                ]
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "mention",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "negative",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 8,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "most-active-users-sentiment-break",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "f21871ce",
+                  "fields": [
+                    {
+                      "name": "user",
+                      "expression": "`user`"
+                    },
+                    {
+                      "name": "positive_tweets",
+                      "expression": "`positive_tweets`"
+                    },
+                    {
+                      "name": "negative_tweets",
+                      "expression": "`negative_tweets`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Most active users with sentiment breakdown"
+              },
+              "mark": {
+                "colors": [
+                  "#2F7E96",
+                  "#3C2593",
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 3
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 4
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 5
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 6
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 7
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 8
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 9
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 10
+                  }
+                ]
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "user",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "fields": [
+                    {
+                      "fieldName": "positive_tweets"
+                    },
+                    {
+                      "fieldName": "negative_tweets"
+                    }
+                  ]
+                },
+                "label": {
+                  "show": false
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 14,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "a87",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "049a553b",
+                  "fields": [
+                    {
+                      "name": "avg_confidence",
+                      "expression": "`avg_confidence`"
+                    },
+                    {
+                      "name": "predicted_sentiment",
+                      "expression": "`predicted_sentiment`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Average confidence score by sentiment"
+              },
+              "widgetType": "pie",
+              "encodings": {
+                "angle": {
+                  "fieldName": "avg_confidence",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "predicted_sentiment",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "negative",
+                        "color": "#6F3F6F"
+                      },
+                      {
+                        "value": "positive",
+                        "color": "#5B8A5C"
+                      }
+                    ]
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 14,
+            "width": 6,
+            "height": 6
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+    },
+    "applyModeEnabled": false
+  }
+}
